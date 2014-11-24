@@ -24,16 +24,16 @@ public class Tiger
     // the straight-line interpreter (and compiler)    
     switch (Control.ConSlp.action){
     case NONE:
-      System.exit(0);
+     // System.exit(0);
       break;
     default:
       slp.Main slpmain = new slp.Main();
       if (Control.ConSlp.div) {
         slpmain.doit(slp.Samples.dividebyzero);
-        System.exit(0);
+       // System.exit(0);
       }
       slpmain.doit(slp.Samples.prog);
-      System.exit(0);
+      //System.exit(0);
     }
 
     

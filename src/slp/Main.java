@@ -1,7 +1,10 @@
 package slp;
 
 import java.io.FileWriter;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Stack;
 
 import slp.Slp.Exp;
 import slp.Slp.Exp.Eseq;
@@ -11,7 +14,6 @@ import slp.Slp.Exp.Op;
 import slp.Slp.ExpList;
 import slp.Slp.Stm;
 import util.Bug;
-import util.Todo;
 import control.Control;
 
 public class Main
@@ -81,7 +83,7 @@ public class Main
     return -1;
   }
 
-  private int maxArgsStm(Stm.T stm)
+ /* private int maxArgsStm(Stm.T stm)
   {
     if (stm instanceof Stm.Compound) {
       Stm.Compound s = (Stm.Compound) stm;
@@ -100,26 +102,149 @@ public class Main
     } else
       new Bug();
     return 0;
-  }
+  }*/
 
   // ////////////////////////////////////////
   // interpreter
+  
+  HashSet<Table> id = new HashSet<Table>();
 
-  private void interpExp(Exp.T exp)
+  /*private void interpExp(Exp.T exp)
   {
     new Todo();
+  }*/
+
+  private int getNumOfId(String name)
+  {
+	  Iterator it = id.iterator();
+	  while(it.hasNext())
+	  {
+		  Table t = (Table)it.next();
+		  if(name.equals(t.id))
+		  {
+			  return t.value;
+		
+		  }
+		  
+	  }
+	  return 0;
+  }
+  
+  private void update(String us, int un)
+  {
+	  
+	  Table ut = new Table(us,un);
+	  id.add(ut);
+	  
+  }
+  
+
+  private int interpExp(Exp.T exp)
+  {
+	  
+	  if(exp instanceof Exp.Id)
+	  {
+		  Exp.Id ei = (Exp.Id) exp;		  
+		  return getNumOfId(ei.id);
+	  }
+	  
+	  else if(exp instanceof Exp.Num)
+	{
+		Exp.Num en = (Exp.Num) exp;		
+		return en.num;
+		
+	}
+	  else if(exp instanceof Exp.Eseq)
+	  {
+		  Exp.Eseq ee = (Exp.Eseq) exp;
+		  Stm.T st = ee.stm;
+		  Exp.T et = ee.exp;
+		  interpStm(st);//here red
+		  return interpExp(et);//here 80
+	  }
+	  else if(exp instanceof Exp.Op)
+	  {
+		  Exp.Op e = (Exp.Op) exp;
+	      Exp.T left = e.left;
+	      Exp.T right = e.right;
+	      Exp.OP_T op = e.op;	      
+	 
+	      switch (op) {
+	      case ADD:
+	    	  int tempn1 = interpExp(left);
+	    	  int tempn2 = interpExp(right);
+	       return tempn1+tempn2;
+	      case SUB:
+	    	  tempn1 = interpExp(left);
+	    	  tempn2 = interpExp(right);
+		       return tempn1-tempn2;
+	        
+	      case TIMES:
+	    	  tempn1 = interpExp(left);
+	    	  tempn2 = interpExp(right);
+		       return tempn1*tempn2;
+	        
+	      case DIVIDE:
+	    	  tempn1 = interpExp(left);
+	    	  tempn2 = interpExp(right);
+		       return tempn1/tempn2;
+	        
+	      default:
+	        new Bug();
+	      
+	      }
+	  }
+	  return -1;
   }
 
+  private void interpExpList(ExpList.T exp)
+  {
+	  if(exp instanceof ExpList.Pair)//pair zhiqian yiding shi print?
+	  {
+		  ExpList.Pair ep = (ExpList.Pair) exp;//lost here
+		  Exp.T et = ep.exp;
+		  ExpList.T ept = ep.list;	
+		  System.out.print(interpExp(et)+" ");// first 8
+		  interpExpList(ept);
+	  }
+	  if(exp instanceof ExpList.Last)
+	  {
+		  ExpList.Last el = (ExpList.Last) exp;
+		  Exp.T et = el.exp;
+		 System.out.println(interpExp(et));//first 7
+	  }
+  }
+  
   private void interpStm(Stm.T prog)
   {
     if (prog instanceof Stm.Compound) {
-      new Todo();
+    	Stm.Compound s = (Stm.Compound) prog;
+    	interpStm(s.s1);
+    	interpStm(s.s2);
+      
     } else if (prog instanceof Stm.Assign) {
-      new Todo();
+    	Stm.Assign a = (Stm.Assign) prog;
+    	Exp.T et = a.exp;
+        update(a.id,interpExp(et));    
+        
     } else if (prog instanceof Stm.Print) {
-      new Todo();
+        Stm.Print sp = (Stm.Print) prog;
+        ExpList.T explist = sp.explist;
+        interpExpList(explist);
+       
     } else
       new Bug();
+  }
+  
+  private void printValue()//output values of hashset of id
+  {
+	  Iterator ie = id.iterator();
+	  while(ie.hasNext())
+	  {
+		  Table t = (Table)ie.next();
+		  System.out.println(t.id+"  "+t.value);
+		  
+	  }
   }
 
   // ////////////////////////////////////////
@@ -177,11 +302,18 @@ public class Main
         compileExp(left);
         emit("\tpushl\t%eax\n");
         compileExp(right);
+        if((buf.lastIndexOf("0")-1)==buf.lastIndexOf("$"))//no divid10 also error
+        {
+        	System.out.println("divied by zero!!\nProcess will terminate immediately!");
+        	System.exit(1);
+        }
+        else{
         emit("\tpopl\t%edx\n");
         emit("\tmovl\t%eax, %ecx\n");
         emit("\tmovl\t%edx, %eax\n");
         emit("\tcltd\n");
         emit("\tdiv\t%ecx\n");
+        }
         break;
       default:
         new Bug();
@@ -265,6 +397,7 @@ public class Main
     // interpret a given program
     if (Control.ConSlp.action == Control.ConSlp.T.INTERP) {
       interpStm(prog);
+      //printValue();
     }
 
     // compile a given SLP program to x86
